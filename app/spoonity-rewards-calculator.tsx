@@ -100,18 +100,10 @@ const validateEmail = (email: string): boolean => {
 
 const validateToken = async (inputToken: string): Promise<boolean> => {
   try {
-    // First, try to decode the Base64 string
     const decodedString = atob(inputToken);
-
-    // Then parse the JSON
     const tokenData = JSON.parse(decodedString);
-
-    // Check if the token contains the required paraphrase and is not expired
-    const isValid =
-      tokenData.paraphrase === "client-specific-encrypt-key" &&
+    return tokenData.paraphrase === "client-specific-encrypt-key" &&
       new Date(tokenData.expiresAt) > new Date();
-
-    return isValid;
   } catch (error) {
     console.error("Error validating token:", error);
     return false;
@@ -128,13 +120,12 @@ const saveTokenAndData = (token: string, userData: UserData): void => {
 const checkTokenExpiry = (): boolean => {
   const expiryTime = localStorage.getItem("spoonity_token_expiry");
   if (expiryTime && parseInt(expiryTime) < Date.now()) {
-    // Token expired
     localStorage.removeItem("spoonity_token");
     localStorage.removeItem("spoonity_token_expiry");
     localStorage.removeItem("spoonity_user_data");
-    return true; // Token expired
+    return true;
   }
-  return false; // Token still valid
+  return false;
 };
 
 const getStoredUserData = (): UserData | null => {
@@ -148,12 +139,6 @@ const getStoredUserData = (): UserData | null => {
     }
   }
   return null;
-};
-
-const clearStoredData = (): void => {
-  localStorage.removeItem("spoonity_token");
-  localStorage.removeItem("spoonity_token_expiry");
-  localStorage.removeItem("spoonity_user_data");
 };
 
 const validateUserData = (
@@ -207,9 +192,7 @@ export default function SpoonityRewardsCalculator() {
   const [role, setRole] = useState("");
   const [country, setCountry] = useState("USA");
   const [otherCountry, setOtherCountry] = useState("");
-  const [businessType, setBusinessType] = useState<"corporate" | "franchise">(
-    "corporate"
-  );
+  const [businessType, setBusinessType] = useState<"corporate" | "franchise">("corporate");
   const [token, setToken] = useState("");
   const [tokenError, setTokenError] = useState("");
   const [firstNameError, setFirstNameError] = useState("");
@@ -220,72 +203,23 @@ export default function SpoonityRewardsCalculator() {
   const [roleError, setRoleError] = useState("");
   const [countryError, setCountryError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState("");
 
-  // Pricing Calculator state variables (missing from original file)
-  const [plan, setPlan] = useState("loyalty");
-  const [stores, setStores] = useState(10);
-  const [transactions, setTransactions] = useState(1000);
-  const [marketing, setMarketing] = useState(10000);
-  const [giftCard, setGiftCard] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [smsEnabled, setSmsEnabled] = useState(true);
-  const [smsMessages, setSmsMessages] = useState("");
-  const [smsCountry, setSmsCountry] = useState("USA");
-  const [independentServer, setIndependentServer] = useState(false);
-  const [premiumSupport, setPremiumSupport] = useState(false);
-  const [premiumSLA, setPremiumSLA] = useState(false);
-  const [cms, setCms] = useState(false);
-  const [appType, setAppType] = useState("none");
-  const [dataIngestion, setDataIngestion] = useState(false);
-  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
-  const [whatsappCountry, setWhatsappCountry] = useState("Mexico");
-  const [whatsappMarketTicket, setWhatsappMarketTicket] = useState(0);
-  const [whatsappUtility, setWhatsappUtility] = useState(0);
-  const [whatsappMarketing, setWhatsappMarketing] = useState(0);
-  const [whatsappOtp, setWhatsappOtp] = useState(0);
-  const [monthlyFees, setMonthlyFees] = useState(0);
-  const [setupFees, setSetupFees] = useState(0);
-  const [perStore, setPerStore] = useState(0);
-  const [totalBeforeSupport, setTotalBeforeSupport] = useState(0);
-  const [feeBreakdown, setFeeBreakdown] = useState({
-    total: 0,
-    connection: 0,
-    baseLicense: 0,
-    transaction: 0,
-    marketing: 0,
-    giftCard: 0,
-    sms: 0,
-    whatsapp: {
-      base: 0,
-      perStore: 0,
-      messages: 0,
-      total: 0,
-    },
-    server: 0,
-    sla: 0,
-    cms: 0,
-    app: 0,
-    support: 0,
-    corporate: 0,
-    franchisee: 0,
-    franchiseePerStore: 0,
-    setup: {
-      total: 0,
-      onboarding: 0,
-      appSetup: 0,
-      dataIngestion: 0,
-    },
+  // Rewards Calculator state variables
+  const [items, setItems] = useState<Item[]>([]);
+  const [tiers, setTiers] = useState<Tier[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [activeTab, setActiveTab] = useState("setup");
+  const [config, setConfig] = useState({
+    pointsPerDollar: 100,
+    defaultPayback: 7,
+    cogsMargin: 30,
+    currencyName: "Points",
   });
-  const [webhookLogs, setWebhookLogs] = useState<any[]>([]);
-  const [showLogs, setShowLogs] = useState(false);
 
   // Function to reset all states to default values
   const resetAllStates = () => {
     // Clear all localStorage items
-    localStorage.clear(); // This will remove all items from localStorage
+    localStorage.clear();
 
     // Reset all state variables
     setFirstName("");
@@ -306,73 +240,11 @@ export default function SpoonityRewardsCalculator() {
     setCompanyError("");
     setRoleError("");
     setCountryError("");
-    setPlan("loyalty");
-    setStores(10);
-    setTransactions(1000);
-    setMarketing(10000);
-    setGiftCard(false);
-    setPushNotifications(false);
-    setSmsEnabled(true);
-    setSmsMessages("");
-    setSmsCountry("USA");
-    setIndependentServer(false);
-    setPremiumSupport(false);
-    setPremiumSLA(false);
-    setCms(false);
-    setAppType("none");
-    setDataIngestion(false);
-    setWhatsappEnabled(false);
-    setWhatsappCountry("Mexico");
-    setWhatsappMarketTicket(0);
-    setWhatsappUtility(0);
-    setWhatsappMarketing(0);
-    setWhatsappOtp(0);
-    setMonthlyFees(0);
-    setSetupFees(0);
-    setPerStore(0);
-    setActiveTab("inputs");
-    setTotalBeforeSupport(0);
-    setFeeBreakdown({
-      total: 0,
-      connection: 0,
-      baseLicense: 0,
-      transaction: 0,
-      marketing: 0,
-      giftCard: 0,
-      sms: 0,
-      whatsapp: {
-        base: 0,
-        perStore: 0,
-        messages: 0,
-        total: 0,
-      },
-      server: 0,
-      sla: 0,
-      cms: 0,
-      app: 0,
-      support: 0,
-      corporate: 0,
-      franchisee: 0,
-      franchiseePerStore: 0,
-      setup: {
-        total: 0,
-        onboarding: 0,
-        appSetup: 0,
-        dataIngestion: 0,
-      },
-    });
     setIsLoggedIn(false);
-    setSubmitSuccess(false);
-    setIsSubmitting(false);
-    setSubmitError("");
-    setWebhookLogs([]);
-    setShowLogs(false);
-    // Reset rewards calculator specific states
     setItems([]);
     setTiers([]);
     setResults([]);
-    setShowAddTier(false);
-    setNewTierPrice("");
+    setActiveTab("setup");
     setConfig({
       pointsPerDollar: 100,
       defaultPayback: 7,
@@ -395,8 +267,6 @@ export default function SpoonityRewardsCalculator() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setIsSubmitting(true);
-
     // Clear all previous errors
     setTokenError("");
     setFirstNameError("");
@@ -406,7 +276,6 @@ export default function SpoonityRewardsCalculator() {
     setCompanyError("");
     setRoleError("");
     setCountryError("");
-    setSubmitError("");
 
     try {
       // Basic validation
@@ -438,14 +307,11 @@ export default function SpoonityRewardsCalculator() {
           setRoleError(validation.fieldErrors.role);
         if (validation.fieldErrors.country)
           setCountryError(validation.fieldErrors.country);
-
-        setSubmitError("Please fix the errors below");
         return;
       }
 
       if (!token.trim()) {
         setTokenError("Please enter your access token");
-        setSubmitError("Please enter your access token");
         return;
       }
 
@@ -453,19 +319,7 @@ export default function SpoonityRewardsCalculator() {
       const isValidToken = await validateToken(token);
       if (!isValidToken) {
         setTokenError("Invalid access token");
-        setSubmitError("Invalid access token");
         return;
-      }
-
-      // If validation passes, set initial values based on country selection
-      if (country === "Other") {
-        // If "Other" country, initialize SMS to false and disabled
-        setSmsEnabled(false);
-        setSmsMessages("");
-        setSmsCountry("USA");
-      } else {
-        // Set the SMS country to match the selected country
-        setSmsCountry(country);
       }
 
       // Save token and user data
@@ -473,35 +327,16 @@ export default function SpoonityRewardsCalculator() {
 
       // Set logged in state
       setIsLoggedIn(true);
-      setSubmitSuccess(true);
 
       // Scroll to top
-      setTimeout(() => {
-        window.scrollTo({
-          top: 0,
-          behavior: "smooth",
-        });
-      }, 100);
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (error) {
       console.error("Login error:", error);
-      setSubmitError("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
-
-  const [activeTab, setActiveTab] = useState("setup");
-  const [config, setConfig] = useState({
-    pointsPerDollar: 100,
-    defaultPayback: 7,
-    cogsMargin: 30,
-    currencyName: "Points",
-  });
-  const [items, setItems] = useState<Item[]>([]);
-  const [tiers, setTiers] = useState<Tier[]>([]);
-  const [results, setResults] = useState<Result[]>([]);
-  const [showAddTier, setShowAddTier] = useState(false);
-  const [newTierPrice, setNewTierPrice] = useState("");
 
   // Check for existing token on component mount
   useEffect(() => {
@@ -555,8 +390,8 @@ export default function SpoonityRewardsCalculator() {
   // Update all tiers when payback rate changes in setup
   useEffect(() => {
     if (tiers.length > 0) {
-      setTiers(
-        tiers.map((tier) => {
+      setTiers((currentTiers) =>
+        currentTiers.map((tier) => {
           const newSuggestedPointCost = Math.round(
             ((tier.minPrice +
               (tier.maxPrice === Infinity
@@ -577,7 +412,7 @@ export default function SpoonityRewardsCalculator() {
         })
       );
     }
-  }, [config.defaultPayback, config.pointsPerDollar]);
+  }, [config.defaultPayback, config.pointsPerDollar, tiers.length]);
 
   // Debug: Log results state whenever it changes
   useEffect(() => {
@@ -642,7 +477,7 @@ export default function SpoonityRewardsCalculator() {
             included: true,
           };
         })
-        .filter((item: any) => item !== null) as Item[];
+        .filter((item): item is Item => item !== null);
 
       setItems(newItems);
       setActiveTab("items"); // Auto-advance to items tab
@@ -657,61 +492,6 @@ export default function SpoonityRewardsCalculator() {
     if (points >= 1000) return Math.round(points / 500) * 500;
     if (points >= 500) return Math.round(points / 100) * 100;
     return Math.round(points / 50) * 50;
-  };
-
-  // Add new tier at specified price point
-  const addNewTier = () => {
-    const pricePoint = parseFloat(newTierPrice);
-    if (isNaN(pricePoint) || pricePoint <= 0) {
-      alert("Please enter a valid price point");
-      return;
-    }
-
-    const includedItems = items.filter((item) => item.included);
-    if (includedItems.length === 0) return;
-
-    const prices = includedItems
-      .map((item) => item.retailPrice)
-      .sort((a, b) => a - b);
-
-    // Add the new price point to existing prices and remove duplicates
-    const allPrices = [...new Set([...prices, pricePoint])].sort(
-      (a, b) => a - b
-    );
-
-    // Regenerate tiers with the new price point included
-    const numTiers = 5; // Keep 5 tiers
-    const newTiers = [];
-
-    for (let i = 0; i < numTiers; i++) {
-      const startIndex = Math.floor((i * allPrices.length) / numTiers);
-      const endIndex = Math.floor(((i + 1) * allPrices.length) / numTiers) - 1;
-
-      const minPrice = i === 0 ? 0 : allPrices[startIndex];
-      const maxPrice = i === numTiers - 1 ? Infinity : allPrices[endIndex];
-
-      // Calculate suggested point cost based on average price in tier
-      const tierPrices = allPrices.slice(startIndex, endIndex + 1);
-      const avgPrice =
-        tierPrices.reduce((sum, price) => sum + price, 0) / tierPrices.length;
-      const suggestedPointCost = Math.round(
-        (avgPrice / (config.defaultPayback / 100)) * config.pointsPerDollar
-      );
-      const tierName = `${roundToNiceNumber(suggestedPointCost)} Points`;
-
-      newTiers.push({
-        id: i,
-        name: tierName,
-        minPrice,
-        maxPrice,
-        paybackRate: config.defaultPayback,
-        suggestedPointCost,
-      });
-    }
-
-    setTiers(newTiers);
-    setShowAddTier(false);
-    setNewTierPrice("");
   };
 
   // Generate tiers
@@ -759,53 +539,10 @@ export default function SpoonityRewardsCalculator() {
     setActiveTab("tiers"); // Auto-advance to tiers tab
   };
 
-  // Calculate point value (for display purposes)
-  const calculatePointValue = () => {
-    return config.defaultPayback / 100 / config.pointsPerDollar;
-  };
-
-  // Calculate suggested point cost for a given payback rate and price
-  const calculateSuggestedPointCost = (price: number, paybackRate: number) => {
-    // Point Cost = (Retail Price ÷ Payback Rate) × Points per Dollar
-    return Math.round((price / (paybackRate / 100)) * config.pointsPerDollar);
-  };
-
-  // Update tier
-  const updateTier = (tierId: number, field: string, value: any) => {
-    setTiers(
-      tiers.map((tier) => {
-        if (tier.id === tierId) {
-          const updatedTier = { ...tier, [field]: value };
-
-          // Recalculate suggested point cost when payback rate changes
-          if (field === "paybackRate") {
-            const avgPrice =
-              (tier.minPrice +
-                (tier.maxPrice === Infinity
-                  ? tier.minPrice * 2
-                  : tier.maxPrice)) /
-              2;
-            updatedTier.suggestedPointCost = calculateSuggestedPointCost(
-              avgPrice,
-              value
-            );
-          }
-
-          return updatedTier;
-        }
-        return tier;
-      })
-    );
-  };
-
   // Calculate results
   const calculateResults = () => {
     const includedItems = items.filter((item) => item.included);
     if (includedItems.length === 0 || tiers.length === 0) return;
-
-    console.log("=== STARTING CALCULATIONS ===");
-    console.log("Config:", config);
-    console.log("Available Tiers:", tiers);
 
     const calculatedResults = includedItems.map((item) => {
       // Find appropriate tier
@@ -816,41 +553,13 @@ export default function SpoonityRewardsCalculator() {
             (t.maxPrice === Infinity || item.retailPrice <= t.maxPrice)
         ) || tiers[tiers.length - 1];
 
-      console.log(`\n--- ITEM: ${item.name} ---`);
-      console.log(`Retail Price: $${item.retailPrice}`);
-      console.log(
-        `Matched Tier: ${tier.name} (${tier.minPrice} - ${
-          tier.maxPrice === Infinity ? "∞" : tier.maxPrice
-        })`
-      );
-      console.log(`Tier Payback Rate FROM TIER OBJECT: ${tier.paybackRate}%`);
-      console.log(`Tier object full details:`, tier);
-
       // Calculate point cost: how much customer needs to spend to earn this reward
       const paybackRateDecimal = tier.paybackRate / 100;
-      console.log(
-        `Payback Rate as decimal: ${tier.paybackRate} / 100 = ${paybackRateDecimal}`
-      );
 
       // Point Cost = (Retail Price ÷ Payback Rate) × Points per Dollar
       const customerSpendRequired = item.retailPrice / paybackRateDecimal;
-      console.log(
-        `Customer Spend Required: $${item.retailPrice} ÷ ${paybackRateDecimal} = $${customerSpendRequired}`
-      );
-
-      // VERIFICATION CHECK
-      if (Math.abs(customerSpendRequired - item.retailPrice) < 0.01) {
-        console.log(
-          `🚨 ERROR: Customer spend required equals retail price! This means payback rate = 100%`
-        );
-        console.log(`🚨 Check: paybackRateDecimal = ${paybackRateDecimal}`);
-      }
-
       const pointCost = Math.round(
         customerSpendRequired * config.pointsPerDollar
-      );
-      console.log(
-        `Point Cost: $${customerSpendRequired} × ${config.pointsPerDollar} = ${pointCost} points`
       );
 
       // Effective cost to business = retail price of the reward item
@@ -862,19 +571,7 @@ export default function SpoonityRewardsCalculator() {
       const netBenefit = profitFromSpend - effectiveCost;
       const profitImpact = (effectiveCost / profitFromSpend) * 100;
 
-      console.log(
-        `Profit from $${customerSpendRequired} spend at ${
-          config.cogsMargin
-        }% margin: $${profitFromSpend.toFixed(2)}`
-      );
-      console.log(`Reward costs: $${effectiveCost.toFixed(2)}`);
-      console.log(
-        `Profit Impact: (${effectiveCost} ÷ ${profitFromSpend.toFixed(
-          2
-        )}) × 100 = ${profitImpact.toFixed(1)}%`
-      );
-
-      const result = {
+      return {
         ...item,
         tier: tier.name,
         tierSuggestedCost: tier.suggestedPointCost,
@@ -886,32 +583,11 @@ export default function SpoonityRewardsCalculator() {
         netBenefit,
         profitFromSpend,
       };
-
-      console.log(`🔍 FINAL RESULT OBJECT for ${item.name}:`, result);
-      console.log(`  - customerSpendRequired: ${result.customerSpendRequired}`);
-      console.log(`  - profitFromSpend: ${result.profitFromSpend}`);
-      console.log(`  - profitImpact: ${result.profitImpact}`);
-
-      return result;
     });
 
     // Sort results by point cost (ascending)
     calculatedResults.sort((a, b) => a.pointCost - b.pointCost);
-
-    console.log("=== FINAL RESULTS ARRAY ===");
-    console.log("Results array length:", calculatedResults.length);
-    calculatedResults.forEach((result, index) => {
-      console.log(`[${index}] ${result.name}:`);
-      console.log(`  - retailPrice: ${result.retailPrice}`);
-      console.log(`  - customerSpendRequired: ${result.customerSpendRequired}`);
-      console.log(`  - profitFromSpend: ${result.profitFromSpend}`);
-      console.log(`  - profitImpact: ${result.profitImpact}`);
-      console.log(`  - pointCost: ${result.pointCost}`);
-    });
-
-    console.log("🔄 About to call setResults with:", calculatedResults);
     setResults(calculatedResults);
-    console.log("✅ setResults called");
     setActiveTab("results"); // Auto-advance to results tab
   };
 
@@ -1468,7 +1144,7 @@ export default function SpoonityRewardsCalculator() {
               Please enter your information to continue
             </h2>
             <p className="text-sm text-gray-600">
-              Configure your loyalty program and analyze reward costse
+              Configure your loyalty program and analyze reward costs
             </p>
           </div>
 
